@@ -1,0 +1,15 @@
+name: vnc
+on: workflow_dispatch
+jobs:
+  vm:
+    runs-on: windows-2022
+    steps:
+      - uses: tailscale/github-action@v3
+        with:
+          authkey: ${{ secrets.TS_AUTHKEY }}
+          hostname: win-vnc
+      - run: choco install tightvnc -y --installarguments "'SET_USEVNCAUTHENTICATION=1 VALUE_OF_USEVNCAUTHENTICATION=1 SET_PASSWORD=1 VALUE_OF_PASSWORD=${{ secrets.VNC_PASS }}'"
+      - run: New-NetFirewallRule -DisplayName vnc -Direction Inbound -LocalPort 5900 -Protocol TCP -Action Allow
+      - run: Start-Service tvnserver
+      - run: tailscale ip -4
+      - run: Start-Sleep -Seconds 21000
