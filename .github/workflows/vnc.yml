@@ -1,5 +1,7 @@
 name: vnc
-on: workflow_dispatch
+on:
+  push:
+  workflow_dispatch:
 jobs:
   vm:
     runs-on: windows-2022
@@ -13,4 +15,3 @@ jobs:
       - run: Start-Service tvnserver
       - run: tailscale ip -4
       - run: Start-Sleep -Seconds 21000
-
