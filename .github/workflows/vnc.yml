@@ -12,6 +12,4 @@ jobs:
       - run: git clone --depth 1 https://github.com/novnc/noVNC.git
       - run: Start-Process python -ArgumentList "-m","websockify","--web","noVNC","6080","localhost:5900"
       - run: choco install cloudflared -y
-      - run: Start-Process cloudflared -ArgumentList "tunnel","--url","http://localhost:6080" -RedirectStandardError "$PWD\cf.err" -RedirectStandardOutput "$PWD\cf.out"
-      - run: Start-Sleep 20; Select-String -Path "$PWD\cf.err" -Pattern "https://[a-z0-9-]+\.trycloudflare\.com" | Select-Object -First 1 | ForEach-Object { $_.Matches.Value }
-      - run: Start-Sleep -Seconds 21000
+      - run: cloudflared tunnel --url http://localhost:6080
