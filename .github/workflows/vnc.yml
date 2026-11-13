@@ -6,12 +6,12 @@ jobs:
   vm:
     runs-on: windows-2022
     steps:
-      - uses: tailscale/github-action@v3
-        with:
-          authkey: ${{ secrets.TS_AUTHKEY }}
-          hostname: win-vnc
       - run: choco install tightvnc -y --installarguments "'SET_USEVNCAUTHENTICATION=1 VALUE_OF_USEVNCAUTHENTICATION=1 SET_PASSWORD=1 VALUE_OF_PASSWORD=${{ secrets.VNC_PASS }}'"
-      - run: New-NetFirewallRule -DisplayName vnc -Direction Inbound -LocalPort 5900 -Protocol TCP -Action Allow
       - run: Start-Service tvnserver
-      - run: tailscale ip -4
+      - run: pip install websockify
+      - run: git clone --depth 1 https://github.com/novnc/noVNC.git
+      - run: Start-Process python -ArgumentList "-m","websockify","--web","noVNC","6080","localhost:5900"
+      - run: choco install cloudflared -y
+      - run: Start-Process cloudflared -ArgumentList "tunnel","--url","http://localhost:6080" -RedirectStandardError "$PWD\cf.err" -RedirectStandardOutput "$PWD\cf.out"
+      - run: Start-Sleep 20; Select-String -Path "$PWD\cf.err" -Pattern "https://[a-z0-9-]+\.trycloudflare\.com" | Select-Object -First 1 | ForEach-Object { $_.Matches.Value }
       - run: Start-Sleep -Seconds 21000
