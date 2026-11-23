@@ -6,13 +6,35 @@ jobs:
   vm:
     runs-on: windows-latest
     steps:
-      - run: choco install tightvnc -y --installarguments "'SET_USEVNCAUTHENTICATION=1 VALUE_OF_USEVNCAUTHENTICATION=1 SET_PASSWORD=1 VALUE_OF_PASSWORD=${{ secrets.VNC_PASS }}'"
-      - run: |
+      - name: Allow simple password
+        continue-on-error: true
+        run: |
+          secedit /export /cfg C:\sec.cfg
+          (Get-Content C:\sec.cfg) -replace 'PasswordComplexity = 1','PasswordComplexity = 0' -replace 'MinimumPasswordLength = \d+','MinimumPasswordLength = 0' | Set-Content C:\sec.cfg
+          secedit /configure /db C:\Windows\security\local.sdb /cfg C:\sec.cfg /areas SECURITYPOLICY
+      - name: Set Windows password and auto-login
+        continue-on-error: true
+        env:
+          WINPASS: ${{ secrets.VNC_PASS }}
+        run: |
+          net user runneradmin "$env:WINPASS"
+          $k = "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon"
+          Set-ItemProperty $k AutoAdminLogon "1"
+          Set-ItemProperty $k DefaultUserName "runneradmin"
+          Set-ItemProperty $k DefaultPassword "$env:WINPASS"
+      - name: Install TightVNC
+        run: choco install tightvnc -y --installarguments "'SET_USEVNCAUTHENTICATION=1 VALUE_OF_USEVNCAUTHENTICATION=1 SET_PASSWORD=1 VALUE_OF_PASSWORD=${{ secrets.VNC_PASS }}'"
+      - name: Allow local connections
+        run: |
           New-ItemProperty -Path "HKLM:\SOFTWARE\TightVNC\Server" -Name AllowLoopback -Value 1 -PropertyType DWord -Force
           New-ItemProperty -Path "HKLM:\SOFTWARE\TightVNC\Server" -Name LoopbackOnly -Value 1 -PropertyType DWord -Force
           Restart-Service tvnserver
-      - run: pip install websockify
-      - run: git clone --depth 1 https://github.com/novnc/noVNC.git
-      - run: Start-Process python -ArgumentList "-m","websockify","--web","noVNC","6080","localhost:5900"
-      - run: choco install cloudflared -y
-      - run: cloudflared tunnel --url http://localhost:6080
+      - name: Install noVNC
+        run: |
+          pip install websockify
+          git clone --depth 1 https://github.com/novnc/noVNC.git
+          Start-Process python -ArgumentList "-m","websockify","--web","noVNC","6080","localhost:5900" -WindowStyle Hidden
+      - name: Tunnel
+        run: |
+          choco install cloudflared -y
+          cloudflared tunnel --url http://localhost:6080
