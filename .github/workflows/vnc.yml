@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
 jobs:
   vm:
-    runs-on: windows-latest
+    runs-on: windows-2022
     steps:
       - name: Allow simple password
         continue-on-error: true
